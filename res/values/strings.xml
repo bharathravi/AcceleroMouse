@@ -1,0 +1,8 @@
+<resources>
+    <!-- Simple strings. -->
+    <string name="app_name">AcceleroMouse</string>
+    <string name="back">Back</string>
+    <string name="clear">Clear</string>
+    <string name="hello">Hello</string>
+</resources>
+
