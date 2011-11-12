@@ -17,8 +17,11 @@
 package com.example.android.skeletonapp;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.view.View.OnTouchListener;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.hardware.Sensor;
@@ -29,17 +32,22 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 /**
@@ -51,57 +59,99 @@ public class AcceleroMouse extends Activity {
     
     static final private int BACK_ID = Menu.FIRST;
     static final private int CLEAR_ID = Menu.FIRST + 1;
+	private static final int DIALOG_IPADDRESS_ID = 0;
 
     private Button leftClick;
     private TextView text;
     private WakeLock mWakeLock;
     private MouseSimulator mouseSimulator;
     private NetworkProtocol net;
+    private boolean init=false;
     
     public AcceleroMouse() {
+    }
+    
+    protected Dialog onCreateDialog(int id) {
+        Dialog dialog;
+        switch(id) {
+        case DIALOG_IPADDRESS_ID:
+        	Context mContext = getApplicationContext();
+        	LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(LAYOUT_INFLATER_SERVICE);
+            final View layout = inflater.inflate(R.layout.ipdialog,
+            		(ViewGroup) findViewById(R.id.ipdialoglayout));
+            
+        	return new AlertDialog.Builder(AcceleroMouse.this)
+        	       .setView(layout)
+                   .setCancelable(false)
+                   .setPositiveButton("Begin!", new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						EditText ipEntry = (EditText) layout.findViewById(R.id.ipentry);
+						String ipAddress = ipEntry.getText().toString();
+						
+						EditText portEntry = (EditText) layout.findViewById(R.id.portentry);
+						String port = portEntry.getText().toString();
+						
+						initializeActivity(ipAddress, Integer.parseInt(port));
+					}
+                	   
+                   }).create();
+        default:
+            dialog = null;
+        }
+        return dialog;
     }
 
     /** Called with the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        net = new NetworkProtocol("10.0.0.7", 50154);
-        net.init();
-        WindowManager mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-		Display mDisplay = mWindowManager.getDefaultDisplay();
-        mouseSimulator = new MouseSimulator(this,
-        		new Mouse(0,0, net.xMeters, net.yMeters, mDisplay, net));
-        
-        
-       // LinearLayout linearLayout = (LinearLayout)findViewById(R.id.layout);    
-        //linearLayout.addView(mouseSimulator);
-       // leftClick = (Button)this.findViewById(R.id.click);
-       // text = (TextView)this.findViewById(R.id.textview);       
-       // leftClick.setOnClickListener(clicker);
+        setContentView(R.layout.main);      
         
         //Create a bright wake lock
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
 		mWakeLock = powerManager.newWakeLock(
-				PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getClass().getName());
-        
-        setContentView(mouseSimulator);                 
+				PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getClass().getName());                       
+        showDialog(DIALOG_IPADDRESS_ID);
     }
+
+	private void initializeActivity(String ipAddress, int port) {		
+		net = new NetworkProtocol(ipAddress, 50154);
+        net.init();
+                
+        WindowManager mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+		Display mDisplay = mWindowManager.getDefaultDisplay();
+        mouseSimulator = new MouseSimulator(this,
+        		new RemoteMouse(0,0, mDisplay, net));        
+        
+       // leftClick = (Button)this.findViewById(R.id.click);
+       // text = (TextView)this.findViewById(R.id.textview);       
+       // leftClick.setOnClickListener(clicker);
+                
+        LinearLayout linearLayout = (LinearLayout)findViewById(R.layout.main);    
+	    //linearLayout.addView(mouseSimulator);		
+        
+        init = true;
+        setContentView(mouseSimulator);
+        mouseSimulator.startSimulation();
+        
+        dismissDialog(DIALOG_IPADDRESS_ID);
+	}
         
     
     OnClickListener clicker = new OnClickListener() {		
 		@Override
 		public void onClick(View view) {			
-			TextView text = (TextView) findViewById(R.id.textview);
-			text.setText("Bye");
+			//TextView text = (TextView) findViewById(R.id.textview);
+			//text.setText("Bye");
 		}
 	};
 	
-	class MouseSimulator extends View implements SensorEventListener, OnTouchListener {
-
+	public class MouseSimulator extends View implements SensorEventListener, OnTouchListener {
 		private SensorManager mSensorManager;
 		private Sensor mAccelerometer;
-		private Mouse mouse;
+		private RemoteMouse mouse;
 		private float[] gravity = new float[3];
 		private float kFilteringFactor = 0.6f;
 		private float[] accel = new float[3];
@@ -109,7 +159,7 @@ public class AcceleroMouse extends Activity {
 		private long cpuTimeStamp;
 		
 
-		public MouseSimulator(Context context, Mouse mouse) {
+		public MouseSimulator(Context context, RemoteMouse mouse) {
 			super(context);
 			this.mouse = mouse;
 			this.setOnTouchListener(touchListen);
@@ -210,9 +260,10 @@ public class AcceleroMouse extends Activity {
     protected void onResume() {
         super.onResume();
         mWakeLock.acquire();
-        mouseSimulator.startSimulation();
-    }
-    
+        if (init) {          
+          mouseSimulator.startSimulation();
+        }
+    }    
     
     @Override
 	protected void onPause() {
@@ -221,10 +272,13 @@ public class AcceleroMouse extends Activity {
 		 * When the activity is paused, we make sure to stop the simulation,
 		 * release our sensor resources and wake locks
 		 */
-		// Stop the simulation
-		mouseSimulator.stopSimulation();
-		// and release our wake-lock
-		mWakeLock.release();
+		
+		if (init) {
+		  // Stop the simulation
+		  mouseSimulator.stopSimulation();
+		  // and release our wake-lock
+		  mWakeLock.release();
+		}
 	}
 
     /**

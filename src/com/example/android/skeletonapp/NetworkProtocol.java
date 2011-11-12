@@ -29,6 +29,9 @@ public class NetworkProtocol {
 		this.ip = ip;
 		this.port = port;
 	}
+	
+	public NetworkProtocol() {
+	}
 
 	public void init() {
 		try {
@@ -62,10 +65,10 @@ public class NetworkProtocol {
 			
 			init = true;
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
+			init = false;
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			init = false;
 			e.printStackTrace();
 		}
 	}

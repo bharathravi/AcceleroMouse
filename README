@@ -1,0 +1,18 @@
+WARNING: Hacky code.
+If you still want to risk it:
+1. Start mouse.py with the following options, on a linux machine:
+    ./mouse.py --ip=<ipaddress> --port=<port>
+2. Install AcceleroMouse.apk on your phone.
+3. Run it.
+4. Enter the IP address and port of the server on the app.
+5. Hopefully, have fun.
+
+Moving the mouse:
+The mouse moves by rotation of the phone, and not by displacing the phone.
+Basically imagine you're playin a pinball game with the mouse, using your phone.
+
+Y-axis: tilt phone up/down.
+X-axis: rotate the phone to the left and right, like locking/unlocking with a key.
+
+Click: tap touch screen.
+Double-click: double tap touch screen.
