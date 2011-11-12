@@ -1,7 +1,7 @@
 WARNING: Hacky code.
 If you still want to risk it:
-1. Start mouse.py with the following options, on a linux machine:
-    ./mouse.py --ip=<ipaddress> --port=<port>
+1. Start "server/mouse.py" with the following options, on a linux machine:
+    ./server/mouse.py --ip=<ipaddress> --port=<port>
 2. Install AcceleroMouse.apk on your phone.
 3. Run it.
 4. Enter the IP address and port of the server on the app.
